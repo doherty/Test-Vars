@@ -31,7 +31,7 @@ sub all_vars_ok {
     my $manifest = maniread();
     my @libs    = grep{ m{\A lib/ .* [.]pm \z}xms } keys %{$manifest};
 
-    $builder->plan(tests => scalar @libs);
+    $builder->plan(@libs ? (tests => scalar @libs) : (skip_all => 'No files in lib to test'));
 
     my $fail = 0;
     foreach my $lib(@libs){
