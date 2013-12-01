@@ -10,8 +10,9 @@ our @EXPORT = qw(all_vars_ok vars_ok);
 use parent qw(Test::Builder::Module);
 
 use B ();
-use ExtUtils::Manifest qw(maniread);
 use Symbol qw(qualify_to_ref);
+use File::Find::Rule;
+use File::Find::Rule::Perl;
 
 use constant _VERBOSE       => ($ENV{TEST_VERBOSE} || 0);
 use constant _OPpLVAL_INTRO => 128;
@@ -25,20 +26,20 @@ sub all_vars_ok {
 
     my $builder = __PACKAGE__->builder;
 
-    if(not -f $ExtUtils::Manifest::MANIFEST){
-        $builder->plan(skip_all => "No $ExtUtils::Manifest::MANIFEST ready");
-    }
-    my $manifest = maniread();
-    my @libs    = grep{ m{\A lib/ .* [.]pm \z}xms } keys %{$manifest};
+    my @libs    = File::Find::Rule
+        ->perl_module
+        ->no_index
+        ->in( -d 'blib' ? 'blib' : 'lib' );
 
     if (! @libs) {
-        $builder->plan(skip_all => "not lib/");
+        $builder->plan(skip_all => 'No testable files found');
+    }
+    else {
+        $builder->plan(tests => scalar @libs);
     }
 
-    $builder->plan(tests => scalar @libs);
-
     my $fail = 0;
-    foreach my $lib(@libs){
+    foreach my $lib (@libs) {
         _vars_ok($builder, $lib, \%args) or $fail++;
     }
 
